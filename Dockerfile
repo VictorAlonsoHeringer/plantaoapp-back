@@ -4,13 +4,15 @@ FROM node:18-alpine AS builder
 # Define o diretório de trabalho
 WORKDIR /app
 
+# Instala OpenSSL e dependências necessárias para Prisma
+RUN apk add --no-cache openssl libc6-compat python3 make g++
+
 # Copia os arquivos de dependências
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Instala as dependências
-RUN npm ci --only=production && \
-    npm cache clean --force
+# Instala TODAS as dependências
+RUN npm ci && npm cache clean --force
 
 # Copia o código-fonte
 COPY . .
@@ -21,8 +23,8 @@ RUN npx prisma generate
 # Etapa 2: Produção
 FROM node:18-alpine AS runner
 
-# Instala o dumb-init para melhor gerenciamento de processos
-RUN apk add --no-cache dumb-init
+# Instala dependências do sistema
+RUN apk add --no-cache dumb-init openssl libc6-compat
 
 # Define o diretório de trabalho
 WORKDIR /app
@@ -31,15 +33,20 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Copia dependências e código do builder
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
-COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
+# Copia package files
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/prisma ./prisma
+
+# Instala apenas dependências de produção + ts-node para runtime
+RUN npm ci --only=production && \
+    npm install ts-node typescript && \
+    npm cache clean --force
+
+# Copia o código-fonte e Prisma Client gerado
 COPY --from=builder --chown=nodejs:nodejs /app/src ./src
 COPY --from=builder --chown=nodejs:nodejs /app/tsconfig.json ./
-
-# Instala ts-node para executar TypeScript em produção
-RUN npm install -g ts-node typescript
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
 # Muda para usuário não-root
 USER nodejs
@@ -54,5 +61,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 # Usa dumb-init para melhor gerenciamento de sinais
 ENTRYPOINT ["dumb-init", "--"]
 
-# Comando de início (executa migrations e inicia o servidor)
+# Comando de início (executa migrations e inicia o servidor com ts-node)
 CMD ["sh", "-c", "npx prisma migrate deploy && npx ts-node src/server.ts"]
