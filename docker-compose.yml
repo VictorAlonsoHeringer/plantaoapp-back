@@ -8,11 +8,11 @@ services:
       dockerfile: Dockerfile
     container_name: plantaoapp-api
     ports:
-      - "5555:5555"
+      - "5001:5001"
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/plantaoapp?schema=public
       JWT_SECRET: dev-secret-key-change-in-production
-      PORT: 5555
+      PORT: 5001
       NODE_ENV: development
       CORS_ORIGINS: "*"
     depends_on:
