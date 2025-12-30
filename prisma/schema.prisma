@@ -1,0 +1,149 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  HOSPITAL
+  MEDICO
+}
+
+enum PlantaoStatus {
+  ABERTO
+  EM_ANALISE
+  PREENCHIDO
+  CANCELADO
+}
+
+enum CandidaturaStatus {
+  PENDENTE
+  APROVADA
+  RECUSADA
+  EM_ANDAMENTO
+  FINALIZADO
+  ATRASADO
+}
+
+enum TipoRegistro {
+  ENTRADA
+  SAIDA
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hospital Hospital?
+  medico   Medico?
+
+  @@map("users")
+}
+
+model Hospital {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  nome      String
+  cnpj      String   @unique
+  telefone  String
+  endereco  String
+  cidade    String
+  estado    String
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plantoes Plantao[]
+
+  @@map("hospitals")
+}
+
+model Medico {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  nome           String
+  cpf            String   @unique
+  crm            String   @unique
+  especialidade  String
+  telefone       String
+  cidade         String
+  estado         String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  candidaturas  Candidatura[]
+
+  @@map("medicos")
+}
+
+model Plantao {
+  id                 String         @id @default(uuid())
+  hospitalId         String
+  especialidade      String
+  dataInicio         DateTime
+  dataFim            DateTime
+  valor              Float
+  descricao          String?
+  status             PlantaoStatus  @default(ABERTO)
+  qrCodeToken        String?        @unique
+  qrCodeGeneratedAt  DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  hospital      Hospital        @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  candidaturas  Candidatura[]
+
+  @@map("plantoes")
+}
+
+model Candidatura {
+  id          String             @id @default(uuid())
+  plantaoId   String
+  medicoId    String
+  mensagem    String?
+  status      CandidaturaStatus  @default(PENDENTE)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  plantao         Plantao          @relation(fields: [plantaoId], references: [id], onDelete: Cascade)
+  medico          Medico           @relation(fields: [medicoId], references: [id], onDelete: Cascade)
+  registrosPonto  RegistroPonto[]
+
+  @@unique([plantaoId, medicoId])
+  @@map("candidaturas")
+}
+
+model RegistroPonto {
+  id                  String        @id @default(uuid())
+  candidaturaId       String
+  tipo                TipoRegistro
+  timestamp           DateTime      @default(now())
+  latitude            Float
+  longitude           Float
+  distanciaMetros     Float
+  qrCodeValidado      String
+  justificativaAtraso String?
+  atrasado            Boolean       @default(false)
+  minutosAtraso       Int?
+  createdAt           DateTime      @default(now())
+
+  candidatura Candidatura @relation(fields: [candidaturaId], references: [id], onDelete: Cascade)
+
+  @@map("registros_ponto")
+}

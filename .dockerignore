@@ -1,0 +1,50 @@
+# Dependências
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Arquivos de ambiente (serão fornecidos no runtime)
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Logs
+logs
+*.log
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Arquivos de teste
+coverage
+.nyc_output
+*.test.ts
+*.spec.ts
+
+# Build
+dist
+build
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Documentação
+README.md
+*.md
+
+# Prisma (migrations serão aplicadas no runtime)
+prisma/migrations/*.sql

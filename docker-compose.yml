@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # Backend API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: plantaoapp-api
+    ports:
+      - "5555:5555"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/plantaoapp?schema=public
+      JWT_SECRET: dev-secret-key-change-in-production
+      PORT: 5555
+      NODE_ENV: development
+      CORS_ORIGINS: "*"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - plantaoapp-network
+    restart: unless-stopped
+
+  # PostgreSQL Database (apenas para testes locais)
+  postgres:
+    image: postgres:15-alpine
+    container_name: plantaoapp-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: plantaoapp
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - plantaoapp-network
+    restart: unless-stopped
+
+networks:
+  plantaoapp-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
