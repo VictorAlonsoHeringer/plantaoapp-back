@@ -11,11 +11,22 @@ export async function plantaoRoutes(app: FastifyInstance) {
       status?: string;
     };
 
+    const user = (request as any).user;
+
+    // Se for HOSPITAL, retorna apenas seus próprios plantões
+    // Se for MEDICO, retorna todos os plantões disponíveis
+    const whereCondition: any = {
+      ...(especialidade && { especialidade }),
+      ...(status && { status: status as any }),
+    };
+
+    // HOSPITAL: Filtra apenas plantões do próprio hospital
+    if (user.role === 'HOSPITAL' && user.hospitalId) {
+      whereCondition.hospitalId = user.hospitalId;
+    }
+
     const plantoes = await prisma.plantao.findMany({
-      where: {
-        ...(especialidade && { especialidade }),
-        ...(status && { status: status as any }),
-      },
+      where: whereCondition,
       include: {
         hospital: {
           select: {

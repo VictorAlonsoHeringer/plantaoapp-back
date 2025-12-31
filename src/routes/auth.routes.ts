@@ -60,6 +60,8 @@ export async function authRoutes(app: FastifyInstance) {
                     endereco: body.data.endereco,
                     cidade: body.data.cidade,
                     estado: body.data.estado,
+                    latitude: body.data.latitude || null,
+                    longitude: body.data.longitude || null,
                   },
                 },
               }
