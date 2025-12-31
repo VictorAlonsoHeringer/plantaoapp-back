@@ -11,7 +11,7 @@ export async function plantaoRoutes(app: FastifyInstance) {
       status?: string;
     };
 
-    const user = (request as any).user;
+    const user = request.user as { userId: string; role: string };
 
     // Se for HOSPITAL, retorna apenas seus próprios plantões
     // Se for MEDICO, retorna todos os plantões disponíveis
@@ -21,8 +21,18 @@ export async function plantaoRoutes(app: FastifyInstance) {
     };
 
     // HOSPITAL: Filtra apenas plantões do próprio hospital
-    if (user.role === 'HOSPITAL' && user.hospitalId) {
-      whereCondition.hospitalId = user.hospitalId;
+    if (user.role === 'HOSPITAL') {
+      // Busca o hospital do usuário logado
+      const hospital = await prisma.hospital.findUnique({
+        where: { userId: user.userId },
+      });
+
+      if (!hospital) {
+        return reply.status(404).send({ error: 'Hospital not found' });
+      }
+
+      // Adiciona filtro por hospitalId
+      whereCondition.hospitalId = hospital.id;
     }
 
     const plantoes = await prisma.plantao.findMany({
